@@ -22,13 +22,15 @@ class Token:
       return self.get_name() + ': ' + self.get_value()
 
 
-# TODO: add single quotes to the keywords or string separator
+# at the moments any whitespace inside a string literal is converted to a single space
+# -- one possible solution to avoid that is to keep whitespace tokens and discard them while
+# parsing if we aren't inside a string literal
 class SQLLexer:
    command_regex = re.compile(r"^(?:create|load|store|drop|insert|print|select)$")
    keyword_regex = re.compile(r"^(?:table|as|into|from|where)$")
    type_regex = re.compile(r"^(?:string|int|float)$")
    separator_regex = re.compile(r"^[,\(\)]$")
-   split_regex = re.compile(r"([,\(\)])")
+   split_regex = re.compile(r"([,\(\)'])")
    # operator support will be added later
    # arithmetic_operator_regex = re.compile(r'[-\+\*/]')
    # boolean_operator_regex = re.compile(r'and|or')
@@ -44,6 +46,8 @@ class SQLLexer:
          token_name = 'SEPARATOR'
       elif self.type_regex.match(token_value):
          token_name = 'TYPE'
+      elif token_value == "'":
+         token_name = 'STRING_DELIMITER'
       else:
          token_name = 'LITERAL'
       return Token(token_name, token_value)
@@ -72,6 +76,20 @@ class SQLParser:
                        'insert': self.insert_into,
                        'print': self.print_table,
                        'select': self.select}
+
+
+   def parse_string(self, tokens):
+      string = []
+      while tokens:
+         if tokens[0].get_name() == 'STRING_DELIMITER':
+            string = ' '.join(string)
+            string = "'" + string + "'"
+            return (string, tokens[1:], True)
+         string.append(tokens[0].get_value())
+         tokens = tokens[1:]
+
+      # if we get here then we finished all the tokens without finding the closing string delimiter
+      return (string, [], False)
 
 
    def parse(self, tokens):
@@ -146,8 +164,14 @@ class SQLParser:
 
    def print_table(self, tokens):
       # eats table_name token
-      if not tokens or not self.name_regex.match(tokens[0].get_value()):
+      if not tokens:
          return 'Wrong syntax for PRINT, missing table_name.'
+      # we can do this because we know the if order in SQLLexer.token() (a token has token_name
+      # LITERAL only if it can't be matched to any other token_name)
+      if tokens[0].get_name() != 'LITERAL':
+         return 'Wrong syntax for PRINT, table_name is a reserved keyword.'
+      if not self.name_regex.match(tokens[0].get_value()):
+         return 'Wrong syntax for PRINT, table_name contains forbidden characters.'
       table_name = tokens[0].get_value()
       tokens = tokens[1:]
 
@@ -181,11 +205,24 @@ class SQLParser:
       values_list = []
       i = 1
       while True:
-         # eats value token
-         if not tokens or tokens[0].get_name() != 'LITERAL':
+         # we're always expecting a value token because we either just started or we've eaten a separator token
+         if not tokens:
+            return 'Wrong syntax for INSERT INTO, missing expected value entry number {}.'.format(i)
+
+         # if the next value is a string we need to do extra operation (it's split over multiple tokens)
+         if tokens[0].get_name() == 'STRING_DELIMITER':
+            (value, tokens, success) = self.parse_string(tokens[1:])
+            print(value)
+            print_tokens(tokens)
+            if not success:
+               return 'Wrong syntax for INSERT INTO, something went wrong while parsing the string value number {}.'.format(i)
+         # otherwise we just eat the next literal token
+         elif tokens[0].get_name() == 'LITERAL':
+            value = tokens[0].get_value()
+            tokens = tokens[1:]
+         else:
             return 'Wrong syntax for INSERT INTO, missing value entry number {}.'.format(i)
-         values_list.append(tokens[0].get_value())
-         tokens = tokens[1:]
+         values_list.append(value)
 
          # stops parsing if tokens are over
          if not tokens:
@@ -264,7 +301,7 @@ class Table:
 class Database:
    value_regex = {'float': re.compile(r"^-?\d*.\d*$"),
                   'int': re.compile(r"^-?\d*$"),
-                  'string': re.compile(r"^'.*'$")}
+                  'string': re.compile(r"^.*$")}
    value_parse = {'string': lambda x: x[1:-1],
                   'float': float,
                   'int': int,}
@@ -330,7 +367,7 @@ def print_tokens(tokens):
       print(token)
 
 
-
+# TODO: implement a real test case
 if __name__ == '__main__':
    lexer = SQLLexer()
    database = Database()
@@ -339,22 +376,22 @@ if __name__ == '__main__':
 
    if False:
       print('STARTING QUERY SYNTAX TEST')
-      queries = ('create table Prova ()',
-                 'create tabsle Prova (col1 int, col2 float, col3 string)',
-                 'creates table Prova (col1 int, col2 float, col3 string)',
-                 'create tables Prova (col1 int, col2 float, col3 string)',
-                 'credate table Prova (col1 int, col2 float, col3 string)',
-                 'create table P(rova int (col1 int, col2 float, col3 string)',
-                 'create table Prova (col1 ints, col2 float, col3 string)',
-                 'create table Prova (col1 int, col2 fldoat, col3 string)',
-                 'create table Prova (col1 int, col2 float, col3 strindg)',
-                 'create table Prova (col1 Int, col2 float, col3 string)',
-                 'create table Prova (col1 int, col2 Float, col3 string)',
-                 'create table Prova (col1 int, col2 float, col3 String)',
-                 'create table Prova (col1 int, col2 float, col3 string,)',
-                 'create table Prova (col1 int, col2 float, col3 string',
-                 'create table Prova (col1 int, col2 float, col3 string) :::',
-                 'create table Prova (c`ol1 int, col2 float col3 string)')
+      queries = ('create table Test ()',
+                 'create tabsle Test (col1 int, col2 float, col3 string)',
+                 'creates table Test (col1 int, col2 float, col3 string)',
+                 'create tables Test (col1 int, col2 float, col3 string)',
+                 'credate table Test (col1 int, col2 float, col3 string)',
+                 'create table T(est int (col1 int, col2 float, col3 string)',
+                 'create table Test (col1 ints, col2 float, col3 string)',
+                 'create table Test (col1 int, col2 fldoat, col3 string)',
+                 'create table Test (col1 int, col2 float, col3 strindg)',
+                 'create table Test (col1 Int, col2 float, col3 string)',
+                 'create table Test (col1 int, col2 Float, col3 string)',
+                 'create table Test (col1 int, col2 float, col3 String)',
+                 'create table Test (col1 int, col2 float, col3 string,)',
+                 'create table Test (col1 int, col2 float, col3 string',
+                 'create table Test (col1 int, col2 float, col3 string) :::',
+                 'create table Test (c`ol1 int, col2 float col3 string)')
       for query in queries:
          print(query)
          tokens = lexer.tokenize(query)
@@ -364,10 +401,10 @@ if __name__ == '__main__':
 
    if True:
       print('STARTING CREATE TABLE TEST')
-      queries = ['create table Prova (c1 int, c2 int, c3 float)',
-                 'create table Prova2 (c1 int, c2 string, c3 float)',
-                 'create table Prova (c string)',
-                 'create table Prova2 (jjjj float)']
+      queries = ['create table Test (c1 int, c2 int, c3 float)',
+                 'create table Test2 (c1 int, c2 string, c3 float)',
+                 'create table Test (c string)',
+                 'create table Test2 (jjjj float)']
       for query in queries:
          print(query)
          tokens = lexer.tokenize(query)
@@ -378,10 +415,10 @@ if __name__ == '__main__':
 
    if False:
       print('STARTING PRINT TABLE TEST')
-      queries = ('print Prova',
-                 'print Prova2',
-                 'print Prork',
-                 'print   Prova')
+      queries = ('print Test',
+                 'print Test2',
+                 'print create',
+                 'print   Test')
       for query in queries:
          print(query)
          tokens = lexer.tokenize(query)
@@ -391,14 +428,14 @@ if __name__ == '__main__':
 
    if True:
       print('STARTING INSERT TABLE TEST')
-      queries = ('insert into Prova values 4,2,3.2',
-                 'insert into Prova values 4,2,.2',
-                 'insert into Prova values 4,2,3.',
-                 'insert into Prova values 0,2,',
-                 'insert into Prova values 4,,3.2',
-                 'insert into Prova values 4,3,3.2, 4,22',
-                 'insert into Prova values 4,4',
-                 'insert into Prova2 values 4,\'cicciocarlino\',3.2')
+      queries = ('insert into Test values 4,2,3.2',
+                 'insert into Test values 4,2,.2',
+                 'insert into Test values 4,2,3.',
+                 'insert into Test values 0,2,',
+                 'insert into Test values 4,,3.2',
+                 'insert into Test values 4,3,3.2, 4,22',
+                 'insert into Test values 4,4',
+                 'insert into Test2 values 4,\'Hello World!\',3.2')
       for query in queries:
          print(query)
          tokens = lexer.tokenize(query)
@@ -409,10 +446,10 @@ if __name__ == '__main__':
 
    if True:
       print('STARTING PRINT TABLE TEST')
-      queries = ('print Prova',
-                 'print Prova2',
-                 'print Prork',
-                 'print   Prova')
+      queries = ('print Test',
+                 'print Test2',
+                 'print into as',
+                 'print   Test')
       for query in queries:
          print(query)
          tokens = lexer.tokenize(query)
