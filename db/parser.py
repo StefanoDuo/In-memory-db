@@ -15,7 +15,7 @@ class SQLParser:
                        'print': self.print_table,
                        'select': self.select}
 
-   ### UTILITY METHODS
+
    def parse_string(self, tokens):
       string = []
       while tokens:
@@ -30,7 +30,6 @@ class SQLParser:
       return (string, [], False)
 
 
-   ### INTERFACE METHODS
    def parse(self, tokens):
       #eats command token
       if not tokens:
@@ -43,7 +42,6 @@ class SQLParser:
       return self.commands[command](tokens)
 
 
-   ### DESCENT PARSER METHODS
    def create_table(self, tokens):
       # eats table token
       if not tokens or tokens[0].get_value() != 'table':
@@ -63,7 +61,8 @@ class SQLParser:
          return 'Wrong syntax for CREATE TABLE, missing column list'
       tokens = tokens[1:]
 
-      columns = []
+      column_names = []
+      column_types = []
       i = 1
       while True:
          # eats column_name token
@@ -72,16 +71,15 @@ class SQLParser:
          if not self.name_regex.match(tokens[0].get_value()):
             return 'Wrong syntax for CREATE TABLE, column_name number {} contains forbidden characters.'.format(i)
          column_name = tokens[0].get_value()
+         column_names.append(column_name)
          tokens = tokens[1:]
 
          # eats column_type token
          if not tokens or tokens[0].get_name() != 'TYPE':
             return 'Wrong syntax for CREATE TABLE, missing column_type after column_name number {}.'.format(i)
          column_type = tokens[0].get_value()
+         column_types.append(column_type)
          tokens = tokens[1:]
-
-         # adds column_entry to the list of parsed columns
-         columns.append((column_name, column_type))
 
          # eats separator token
          if not tokens or tokens[0].get_name() != 'SEPARATOR':
@@ -99,7 +97,7 @@ class SQLParser:
          return 'Wrong syntax for CREATE TABLE, command doesn\'t end after )'
 
       # executes command
-      return self.db.create_table(table_name, columns)
+      return self.db.create_table(table_name, column_names, column_types)
 
 
    def print_table(self, tokens):
@@ -264,15 +262,3 @@ class SQLParser:
          return 'Wrong syntax for SELECT, expecting where clause after tables list.'
 
       return self.db.select(columns_list, tables_list)
-
-
-   def transact(self, query):
-      pass
-
-
-   def load(self, query):
-      pass
-
-
-   def store(self, query):
-      pass

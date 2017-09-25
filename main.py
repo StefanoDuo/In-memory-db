@@ -90,7 +90,7 @@ if __name__ == '__main__':
          print(result)
          print('------------------------------------------------')
 
-   if False:
+   if True:
       print('STARTING PRINT TABLE TEST')
       queries = ('print Test',
                  'print Test2',

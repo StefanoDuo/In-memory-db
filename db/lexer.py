@@ -32,7 +32,6 @@ class SQLLexer:
    boolean_operator_regex = re.compile(r'^(?:and|or|>|<|==|=>|<=)$')
 
 
-   ### UTILITY METHODS
    def token(self, token_value):
       token_name = ''
       if self.command_regex.match(token_value):
@@ -54,7 +53,6 @@ class SQLLexer:
       return Token(token_name, token_value)
 
 
-   ### INTERFACE METHODS
    def tokenize(self, string):
       blocks = string.split()
       token_values = []
