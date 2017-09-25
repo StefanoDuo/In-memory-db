@@ -8,8 +8,6 @@ class SQLParser:
    def __init__(self, database):
       self.db = database
       self.commands = {'create': self.create_table,
-                       'load': self.load,
-                       'store': self.store,
                        'drop': self.drop_table,
                        'insert': self.insert_into,
                        'print': self.print_table,

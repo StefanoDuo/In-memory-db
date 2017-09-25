@@ -4,7 +4,7 @@ import re
 
 
 
-def zip_equal(self, *args):
+def zip_equal(*args):
    sentinel = None
    for combo in itertools.zip_longest(*args):
       if sentinel in combo:
@@ -263,10 +263,7 @@ class Database:
                column_index = table.get_index_by_name(column_name)
                column_type = table.get_column_type_by_index(column_index)
                # using a dict to simplify properties access
-               column_entry = {'type': column_type,
-                               'table_name': table_name,
-                               'old_index': column_index,
-                               'new_index': i}
+               column_entry = {'old_index': column_index, 'new_index': i}
                columns[column_name] = column_entry
                break
          else: # executes only if the for loop terminates by exhaustion (not with a break)
