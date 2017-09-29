@@ -1,6 +1,7 @@
 import re
 
 
+
 class Token:
    def __init__(self, name, value):
       self.name = name
@@ -17,6 +18,7 @@ class Token:
 
    def __str__(self):
       return self.get_name() + ': ' + self.get_value()
+
 
 
 # at the moments any whitespace inside a string literal is converted to a single space
