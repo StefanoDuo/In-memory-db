@@ -22,14 +22,6 @@ class CreateRow(unittest.TestCase):
             self.assertEqual(*tuple)
 
 
-   def test_create_row_from_rows(self):
-      rows = [src.database.Row(value_tuple) for value_tuple in self.rows]
-      row = src.database.Row.create_from_rows(*rows)
-      self.assertEqual(type(row),)
-      for tuple in zip(row, itertools.chain(*rows)):
-         self.assertEqual(*tuple)
-
-
 
 if __name__ == '__main__':
    unittest.main()
