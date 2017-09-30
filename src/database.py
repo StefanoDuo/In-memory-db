@@ -260,7 +260,7 @@ class Database:
             raise NameError('A table named {} doesn\'t exists in memory.'.format(table_name))
          tables_scope[table_name] = self.tables[table_name]
 
-      # checks if all the columns_name exist in the tables scope, and stores info about every column_name
+      # checks if all the columns_name exist in the tables scope, and stores their position in the select table
       columns = OrderedDict()
       for i, column_name in enumerate(columns_list):
          if column_name in columns: # at the moment we only support columns with distinct names
@@ -274,11 +274,13 @@ class Database:
 
       select_table = Table.cartesian_product(tables_scope.values())
 
-      column_names_iterator = (column_name for column_name in columns)
-      select_table = select_table.extract_columns_by_name(column_names_iterator)
+      if columns:
+         column_names_iterator = (column_name for column_name in columns)
+         select_table = select_table.extract_columns_by_name(column_names_iterator)
 
-      columns_order = tuple(columns[column_name] for column_name in select_table.get_column_names())
-      select_table = select_table.reorder_columns(columns_order)
+         columns_order = tuple(columns[column_name] for column_name in select_table.get_column_names())
+         select_table = select_table.reorder_columns(columns_order)
+
       return str(select_table)
 
 
