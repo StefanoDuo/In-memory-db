@@ -21,34 +21,34 @@ class Token:
 
 
 
-# at the moments any whitespace inside a string literal is converted to a single space
-# -- one possible solution to avoid that is to keep whitespace tokens and discard them while
-# parsing if we aren't inside a string literal
+# TODO: instead of returning a simple token list, create an object which has a next method for
+# for every token type and keeps track internally of the token list
 class SQLLexer:
-   command_regex = re.compile(r"^(?:create|load|store|drop|insert|print|select)$")
-   keyword_regex = re.compile(r"^(?:table|as|into|from|where)$")
-   type_regex = re.compile(r"^(?:string|int|float)$")
-   separator_regex = re.compile(r"^[,\(\)]$")
-   split_regex = re.compile(r"([,\(\)'])")
-   arithmetic_operator_regex = re.compile(r'^[-\+\*/]$')
-   boolean_operator_regex = re.compile(r'^(?:and|or|>|<|==|=>|<=)$')
+   commands = {'create', 'load', 'store', 'drop', 'insert', 'print', 'select'}
+   keywords = {'table', 'as', 'into', 'from', 'where'}
+   types = {'string', 'int', 'float'}
+   boolean_operators = {'and', 'or', '>', '<', '=', '=>', '<='}   # TODO: merge operator token names
+   arithmetic_operators = {'-', '+', '*', '/'}
+   list_separator = {',', '(', ')'} # TODO: move , and () into different sets
+
+
+   split_maintaining = {',', '(', ')'}
+   split_discarding = {'\n', '\t', ' '}
 
 
    def token(self, token_value):
       token_name = ''
-      if self.command_regex.match(token_value):
+      if token_value in self.commands:
          token_name = 'COMMAND'
-      elif self.keyword_regex.match(token_value):
+      elif token_value in self.keywords:
          token_name = 'KEYWORD'
-      elif self.separator_regex.match(token_value):
+      elif token_value in self.list_separator:
          token_name = 'SEPARATOR'
-      elif self.type_regex.match(token_value):
+      elif token_value in self.types:
          token_name = 'TYPE'
-      elif token_value == "'":
-         token_name = 'STRING_DELIMITER'
-      elif self.arithmetic_operator_regex.match(token_value):
+      elif token_value in self.arithmetic_operators:
          token_name = 'ARITHMETIC_OPERATOR'
-      elif self.boolean_operator_regex.match(token_value):
+      elif token_value in self.boolean_operators:
          token_name = 'BOOLEAN_OPERATOR'
       else:
          token_name = 'LITERAL'
@@ -56,9 +56,29 @@ class SQLLexer:
 
 
    def tokenize(self, string):
-      blocks = string.split()
-      token_values = []
-      for block in blocks:
-         token_values.extend(self.split_regex.split(block))
-      tokens = tuple(self.token(token_value) for token_value in token_values if token_value)
+      inside_string = False
+      t_start = 0
+      t_end = -1  # needed for empty string checking
+      tokens = []
+      for t_end, character in enumerate(string):
+         if character == "'":
+            inside_string = not inside_string
+         elif not inside_string and character in self.split_discarding:
+            if t_start == t_end:
+               # if we find a discarding_split_character at the start of the string or after we just split
+               # we ignore it because there's nothing to split
+               t_start += 1
+            else:
+               # otherwise we append what is inside the interval [t_start, t_end) and move on
+               tokens.append(self.token(string[t_start:t_end]))
+               t_start = t_end + 1
+         elif not inside_string and character in self.split_maintaining:
+            if t_start != t_end:
+               # if we find a maintaining_splitcharacter at the start of the string or after we just split
+               # we append it and move on without append anything else
+               tokens.append(self.token(string[t_start:t_end]))
+            tokens.append(self.token(character))
+            t_start = t_end + 1
+      if t_start <= t_end:
+         tokens.append(self.token(string[t_start:t_end+1]))
       return tokens

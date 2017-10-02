@@ -8,6 +8,16 @@ class SQLParser:
    name_regex = re.compile(r"^[a-zA-Z]\w*$")
 
 
+   operators_priority = {'>': 1,
+                         '>=': 1,
+                         '<': 1,
+                         '<=': 1,
+                         '=': 1,
+                         '!=': 1,
+                         'and': 0,
+                         'or': 0}
+
+
    def parse_string(self, tokens):
       string = []
       while tokens:
@@ -140,12 +150,13 @@ class SQLParser:
             raise ValueError('Wrong syntax for INSERT INTO, missing expected value entry number {}.'.format(i))
 
          # if the next value is a string we need to do extra operation (it's split over multiple tokens)
-         if tokens[0].get_name() == 'STRING_DELIMITER':
-            (value, tokens, success) = self.parse_string(tokens[1:])
-            if not success:
-               raise ValueError('Wrong syntax for INSERT INTO, something went wrong while parsing the string value number {}.'.format(i))
+         # if tokens[0].get_name() == 'STRING_DELIMITER':
+         #    (value, tokens, success) = self.parse_string(tokens[1:])
+         #    if not success:
+         #       raise ValueError('Wrong syntax for INSERT INTO, something went wrong while parsing the string value number {}.'.format(i))
          # otherwise we just eat the next literal token
-         elif tokens[0].get_name() == 'LITERAL':
+         # elif tokens[0].get_name() == 'LITERAL':
+         if tokens[0].get_name() == 'LITERAL':
             value = tokens[0].get_value()
             tokens = tokens[1:]
          else:
@@ -201,7 +212,6 @@ class SQLParser:
          i = 0
          while True:
             # we're always expecting a column_name token because we either just started or we've eaten a separator token
-            # and we discarded the * token case
             if not tokens:
                raise ValueError('Wrong syntax for SELECT, expecting column_name.')
 
@@ -218,6 +228,7 @@ class SQLParser:
             if tokens[0].get_name() != 'SEPARATOR':
                break
 
+            # we eat the separator token and go on parsing the column_list
             tokens = tokens[1:]
             i += 1
 
@@ -243,7 +254,7 @@ class SQLParser:
 
          # the where clause is optional
          if not tokens:
-            return ('select', columns_list, tables_list)
+            return ('select', columns_list, tables_list, [])
 
          if tokens[0].get_name() != 'SEPARATOR':
             break
@@ -254,8 +265,51 @@ class SQLParser:
       # eats where token
       if tokens[0].get_value() != 'where':
          raise ValueError('Wrong syntax for SELECT, expecting where clause after tables list.')
+      tokens = tokens[1:]
 
-      return ('select', columns_list, tables_list)
+      conditions = self.infix_to_postfix(tokens)
+
+      return ('select', columns_list, tables_list, conditions)
+
+   # at the moment we support only expression composed only by boolean operators
+   # TODO: add support for arithmetic operators
+   def infix_to_postfix(self, infix_tokens):
+      # shunting-yard algorithm (without brackets support)
+      if not infix_tokens:
+            raise ValueError('Wrong syntax for SELECT, missing list of conditions.')
+
+      operators_stack = []
+      postfix_tokens = []
+      for token in infix_tokens:
+         # the token is a literal (column_name or a number/string)
+         if token.get_name() == 'LITERAL':
+            postfix_tokens.append(token.get_value())
+            continue
+
+         if token.get_name() != 'BOOLEAN_OPERATOR':   # TODO: tokenize strings directly inside the lexer
+            raise ValueError('Wrong syntax for SELECT, expecting a boolean operator, got something else.')
+
+         # the token is an operator
+         while True:
+            if not operators_stack:
+               break
+
+            stack_head_operator = operators_stack[-1]
+            stack_head_operator_priority = self.operators_priority[stack_head_operator]
+            current_operator = token.get_value()
+            current_operator_priority = self.operators_priority[current_operator]
+
+            if stack_head_operator_priority < current_operator_priority:
+               break
+
+            postfix_tokens.append(operators_stack.pop())
+         operators_stack.append(token.get_value())
+
+      # empties the operators stack after we consume all the infix tokens
+      while operators_stack:
+         postfix_tokens.append(operators_stack.pop())
+
+      return postfix_tokens
 
 
    commands = {'create': create_table,

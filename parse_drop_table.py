@@ -43,7 +43,7 @@ class ParseDropTable(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.forbidden_table_names:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_spelling_errors(self):
@@ -51,7 +51,7 @@ class ParseDropTable(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.spelling_errors:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
    
    def test_trailing_stuff(self):
@@ -59,7 +59,7 @@ class ParseDropTable(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.trailing_stuff:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
 

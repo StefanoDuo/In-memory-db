@@ -6,10 +6,33 @@ import src.database
 class CreateTypeFloat(unittest.TestCase):
 
    correct_values = (
+      "311.232",
       "3.2",
       "2.",
       ".3",
-      "."
+      "4.",
+      ".6",
+      "-311.232",
+      "-3.2",
+      "-2.",
+      "-.3",
+      "-4.",
+      "-.6"
+   )
+
+   print_correct_value = (
+      "311.232",
+      "3.2",
+      "2.0",
+      "0.3",
+      "4.0",
+      "0.6",
+      "-311.232",
+      "-3.2",
+      "-2.0",
+      "-0.3",
+      "-4.0",
+      "-0.6"
    )
 
 
@@ -21,10 +44,10 @@ class CreateTypeFloat(unittest.TestCase):
 
 
    def test_correct_values(self):
-      for value in self.correct_values:
+      for value, print in zip(self.correct_values, self.print_correct_value):
          result = src.database.TypeFloat(value)
          result = str(result)
-         self.assertEqual(result, value)
+         self.assertEqual(result, print)
 
 
    def test_wrong_values(self):

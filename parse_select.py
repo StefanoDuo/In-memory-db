@@ -36,7 +36,7 @@ class ParseSelect(unittest.TestCase):
 
 
    column_list_errors = (
-      # "select *, column_name from Test",
+      "select *, column_name from Test",
       "select column_name1, from Test",
       "select column_name1 column_name2 from Test",
       "select column_name1, , column_name2 from Test",
@@ -55,7 +55,7 @@ class ParseSelect(unittest.TestCase):
 
 
    trailing_stuff = (
-      "select * from Teststuff",
+      "select * from Test stuff",
       "insert into Test ...,,",
    )
 
@@ -65,7 +65,7 @@ class ParseSelect(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.forbidden_table_names:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_spelling_errors(self):
@@ -73,7 +73,7 @@ class ParseSelect(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.spelling_errors:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_column_list_errors(self):
@@ -81,7 +81,7 @@ class ParseSelect(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.column_list_errors:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_table_list_errors(self):
@@ -89,7 +89,7 @@ class ParseSelect(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.table_list_errors:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_trailing_stuff(self):
@@ -97,7 +97,7 @@ class ParseSelect(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.trailing_stuff:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
 if __name__ == '__main__':

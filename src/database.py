@@ -13,22 +13,77 @@ def zip_equal(*args):
 
 
 
-# TODO: implement base class for shared methods between Type classes
+# TODO: implement NaN and NOVALUE logic
 class TypeString:
    regex = re.compile(r"^'.*'$")
 
 
-   def __init__(self, string):
-      if not self.regex.match(string):
+   def __init__(self, value):
+      if type(value) is str and not self.regex.match(value):
          raise TypeError("Value can't be parsed as a string.")
       self.is_NOVALUE = False
-      self.value = string[1:-1]
+      self.value = str(value[1:-1])
+
+
+   def get_value(self):
+      return self.value
 
 
    def __str__(self):
       if self.is_NOVALUE:
          return "''"
-      return "'" + self.value + "'"
+      return "'" + self.get_value() + "'"
+
+
+   def __add__(self, str2):
+      return TypeString(self.get_value() + str2.get_value())
+
+
+   def __lt__(self, str2):
+      return self.get_value() < str2.get_value()
+
+
+   def __le__(self, str2):
+      return self.get_value() <= str2.get_value()
+
+
+   def equal(self, str2):
+      return self.get_value() == str2.get_value()
+
+
+   def __ne__(self, str2):
+      return self.get_value() != str2.get_value()
+
+
+   def __gt__(self, str2):
+      return self.get_value() > str2.get_value()
+
+
+   def __ge__(self, str2):
+      return self.get_value() >= str2.get_value()
+
+
+   def boolean_and(self, str2):
+      return bool(self.get_value()) and bool(str2.get_value())
+
+
+   def boolean_or(self, str2):
+      return bool(self.get_value()) or bool(str2.get_value())
+
+
+   def operation(self, operator, str2):
+      return self.operators[operator](self, str2)
+
+
+   operators = {'+': __add__,
+                '<': __lt__,
+                '<=': __le__,
+                '=': equal,
+                '<>': __ne__,
+                '>': __gt__,
+                '>=': __ge__,
+                'and': boolean_and,
+                'or': boolean_or}
 
 
 
@@ -36,12 +91,16 @@ class TypeInt:
    regex = re.compile(r"^-?\d*$")
 
 
-   def __init__(self, int):
-      if not self.regex.match(int):
+   def __init__(self, value):
+      if type(value) is str and not self.regex.match(value):
          raise TypeError("Value can't be parsed as an int.")
       self.is_NaN = False
       self.is_NOVALUE = False
-      self.value = int
+      self.value = int(value)
+
+
+   def get_value(self):
+      return self.value
 
 
    def __str__(self):
@@ -49,7 +108,63 @@ class TypeInt:
          return "NaN"
       if self.is_NOVALUE:
          return "0"
-      return str(self.value)
+      return str(self.get_value())
+
+
+   def __add__(self, int2):
+      return TypeInt(self.get_value() + int2.get_value())
+
+
+   def __sub__(self, int2):
+      return TypeInt(self.get_value() - int2.get_value())
+
+
+   def __mul__(self, int2):
+      return TypeInt(self.get_value() * int2.get_value())
+
+
+   def __div__(self, int2):
+      return TypeInt(self.get_value() / int2.get_value())
+
+
+   def __lt__(self, int2):
+      return self.get_value() < int2.get_value()
+
+
+   def __le__(self, int2):
+      return self.get_value() <= int2.get_value()
+
+
+   def equal(self, int2):
+      return self.get_value() == int2.get_value()
+
+
+   def __ne__(self, int2):
+      return self.get_value() != int2.get_value()
+
+
+   def __gt__(self, int2):
+      return self.get_value() > int2.get_value()
+
+
+   def __ge__(self, int2):
+      return self.get_value() >= int2.get_value()
+
+
+   def operation(self, operator, str2):
+      return self.operators[operator](self, str2)
+
+
+   operators = {'+': __add__,
+                '-': __sub__,
+                '*': __mul__,
+                '/': __div__,
+                '<': __lt__,
+                '<=': __le__,
+                '=': equal,
+                '<>': __ne__,
+                '>': __gt__,
+                '>=': __ge__}
 
 
 
@@ -57,12 +172,16 @@ class TypeFloat:
    regex = re.compile(r"^-?\d*\.\d*$")
 
 
-   def __init__(self, float):
-      if not self.regex.match(float):
+   def __init__(self, value):
+      if type(value) is str and not self.regex.match(value):
          raise TypeError("Value can't be parsed as a float.")
       self.is_NaN = False
       self.is_NOVALUE = False
-      self.value = float
+      self.value = float(value)
+
+
+   def get_value(self):
+      return self.value
 
 
    def __str__(self):
@@ -71,6 +190,66 @@ class TypeFloat:
       if self.is_NOVALUE:
          return "0.0"
       return str(self.value)
+
+
+   def __add__(self, float2):
+      return TypeFloat(self.value + float2.value)
+
+
+   def __sub__(self, float2):
+      return TypeFloat(self.value - float2.value)
+
+
+   def __mul__(self, float2):
+      return TypeFloat(self.value * float2.value)
+
+
+   def __div__(self, float2):
+      return TypeFloat(self.value / float2.value)
+
+
+   def __add__(self, float2):
+      return TypeString(self.get_value() + float2.get_value())
+
+
+   def __lt__(self, float2):
+      return self.get_value() < float2.get_value()
+
+
+   def __le__(self, float2):
+      return self.get_value() <= float2.get_value()
+
+
+   def equal(self, float2):
+      return self.get_value() == float2.get_value()
+
+
+   def __ne__(self, float2):
+      return self.get_value() != float2.get_value()
+
+
+   def __gt__(self, float2):
+      return self.get_value() > float2.get_value()
+
+
+   def __ge__(self, float2):
+      return self.get_value() >= float2.get_value()
+
+
+   def operation(self, operator, str2):
+      return self.operators[operator](self, str2)
+
+
+   operators = {'+': __add__,
+                '-': __sub__,
+                '*': __mul__,
+                '/': __div__,
+                '<': __lt__,
+                '<=': __le__,
+                '=': equal,
+                '<>': __ne__,
+                '>': __gt__,
+                '>=': __ge__}
 
 
 
@@ -83,6 +262,25 @@ class Row:
    def create_from_rows(cls, *args):
       rows = itertools.chain(*args)
       return cls(rows)
+
+
+   def verify_condition(self, condition):
+      stack = []
+      for element in condition:
+         if element[0] == 'OPERATOR':
+            operator = element[1]
+            # try:
+            arg2 = stack.pop()
+            arg1 = stack.pop()
+            # except IndexError as ie:
+               # raise ValueError("Wrong syntax for SELECT, something went wrong while parsing the condition list.") from ie
+            result = arg1.operation(operator, arg2)   #TODO: implement method operation for type class
+            stack.append(result)
+         elif element[0] == 'COLUMN_NAME':
+            stack.append(self.row[element[1]])
+         else:
+            stack.append(element[1])
+      return bool(stack.pop())
 
 
    def __getitem__(self, key):
@@ -152,6 +350,35 @@ class Table:
          row = list(row)
          reordered_table.insert_row(row)
       return reordered_table
+
+
+   def filter_table(self, condition):
+      if not condition:
+         return self
+      condition = self.modify_condition(condition)
+      filtered_table = Table(self.get_column_names(), self.get_column_types())
+      for row in self.get_rows():
+         if row.verify_condition(condition):
+            filtered_table.insert_row(row)
+      return filtered_table
+
+
+   # this can't be done by the parser because it needs to know about tables etc.
+   def modify_condition(self, condition):
+      modified_condition = []
+      column_names = self.get_column_names()
+      for element in condition:
+         if element in column_names:
+            modified_condition.append(('COLUMN_NAME', self.get_index_by_name(element)))
+         elif TypeFloat.regex.match(element):
+            modified_condition.append(('LITERAL', TypeFloat(element)))
+         elif TypeInt.regex.match(element):
+            modified_condition.append(('LITERAL', TypeInt(element)))
+         elif TypeString.regex.match(element):
+            modified_condition.append(('LITERAL', TypeString(element)))
+         else:
+            modified_condition.append(('OPERATOR', element))
+      return modified_condition
 
 
    def __str__(self):
@@ -251,14 +478,17 @@ class Database:
       table.insert_row(parsed_values)
 
 
-   # TODO: * as column list logic
-   def select(self, columns_list, tables_list):
+   # TODO: implement filtering applying condition to every row
+   def select(self, columns_list, tables_list, condition):
       # checks if all the tables exist and creates the tables scope
       tables_scope = {}
       for table_name in tables_list:
          if table_name not in self.tables:
             raise NameError('A table named {} doesn\'t exists in memory.'.format(table_name))
          tables_scope[table_name] = self.tables[table_name]
+
+      if not columns_list:
+         columns_list = list(column for table in tables_scope.values() for column in table.get_column_names())
 
       # checks if all the columns_name exist in the tables scope, and stores their position in the select table
       columns = OrderedDict()
@@ -274,12 +504,13 @@ class Database:
 
       select_table = Table.cartesian_product(tables_scope.values())
 
-      if columns:
-         column_names_iterator = (column_name for column_name in columns)
-         select_table = select_table.extract_columns_by_name(column_names_iterator)
+      select_table = select_table.filter_table(condition)
 
-         columns_order = tuple(columns[column_name] for column_name in select_table.get_column_names())
-         select_table = select_table.reorder_columns(columns_order)
+      column_names_iterator = (column_name for column_name in columns)
+      select_table = select_table.extract_columns_by_name(column_names_iterator)
+
+      columns_order = tuple(columns[column_name] for column_name in select_table.get_column_names())
+      select_table = select_table.reorder_columns(columns_order)
 
       return str(select_table)
 

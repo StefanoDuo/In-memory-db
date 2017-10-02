@@ -85,7 +85,7 @@ class ParseCreateTable(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.forbidden_table_names:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_forbidden_column_names(self):
@@ -93,7 +93,7 @@ class ParseCreateTable(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.forbidden_column_names:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_spelling_errors(self):
@@ -101,7 +101,7 @@ class ParseCreateTable(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.spelling_errors:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_column_list_errors(self):
@@ -109,14 +109,14 @@ class ParseCreateTable(unittest.TestCase):
       parser = src.parser.SQLParser()
       for query in self.column_list_errors:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
    def test_trailing_stuff(self):
       lexer = src.lexer.SQLLexer()
       parser = src.parser.SQLParser()
       for query in self.trailing_stuff:
          tokens = lexer.tokenize(query)
-         self.assertRaises(ParseError, parser.parse, tokens)
+         self.assertRaises(ValueError, parser.parse, tokens)
 
 
 if __name__ == '__main__':
