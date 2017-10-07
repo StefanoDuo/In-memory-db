@@ -4,11 +4,17 @@ import re
 
 # to simplify the database job the parser instead of returning an AST returns the
 # data structures needed by the database method for the specific command being parsed
+# while the databse is a virtual machine where the possible operations are offered
+# directly as functions
 class SQLParser:
    name_regex = re.compile(r"^[a-zA-Z]\w*$")
 
 
-   operators_priority = {'>': 1,
+   operators_priority = {'+': 2,
+                         '-': 2,
+                         '*': 2,
+                         '/': 2,
+                         '>': 1,
                          '>=': 1,
                          '<': 1,
                          '<=': 1,
@@ -16,20 +22,6 @@ class SQLParser:
                          '!=': 1,
                          'and': 0,
                          'or': 0}
-
-
-   def parse_string(self, tokens):
-      string = []
-      while tokens:
-         if tokens[0].get_name() == 'STRING_DELIMITER':
-            string = ' '.join(string)
-            string = "'" + string + "'"
-            return (string, tokens[1:], True)
-         string.append(tokens[0].get_value())
-         tokens = tokens[1:]
-
-      # if we get here then we finished all the tokens without finding the closing string delimiter
-      return (string, [], False)
 
 
    def parse(self, tokens):
@@ -106,8 +98,6 @@ class SQLParser:
       # eats table_name token
       if not tokens:
          raise ValueError('Wrong syntax for PRINT, missing table_name.')
-      # we can do this because we know the if order in SQLLexer.token() (a token has token_name
-      # LITERAL only if it can't be matched to any other token_name)
       if tokens[0].get_name() != 'LITERAL':
          raise ValueError('Wrong syntax for PRINT, table_name is a reserved keyword.')
       if not self.name_regex.match(tokens[0].get_value()):
@@ -148,14 +138,6 @@ class SQLParser:
          # we're always expecting a value token because we either just started or we've eaten a separator token
          if not tokens:
             raise ValueError('Wrong syntax for INSERT INTO, missing expected value entry number {}.'.format(i))
-
-         # if the next value is a string we need to do extra operation (it's split over multiple tokens)
-         # if tokens[0].get_name() == 'STRING_DELIMITER':
-         #    (value, tokens, success) = self.parse_string(tokens[1:])
-         #    if not success:
-         #       raise ValueError('Wrong syntax for INSERT INTO, something went wrong while parsing the string value number {}.'.format(i))
-         # otherwise we just eat the next literal token
-         # elif tokens[0].get_name() == 'LITERAL':
          if tokens[0].get_name() == 'LITERAL':
             value = tokens[0].get_value()
             tokens = tokens[1:]
@@ -183,8 +165,6 @@ class SQLParser:
       # eats table_name token
       if not tokens:
          raise ValueError('Wrong syntax for DROP, missing table_name.')
-      # we can do this because we know the if order in SQLLexer.token() (a token has token_name
-      # LITERAL only if it can't be matched to any other token_name)
       if tokens[0].get_name() != 'LITERAL':
          raise ValueError('Wrong syntax for DROP, table_name is a reserved keyword.')
       if not self.name_regex.match(tokens[0].get_value()):
@@ -196,7 +176,6 @@ class SQLParser:
       if tokens:
          raise ValueError('Wrong syntax for DROP, command doesn\'t end after table_name.')
 
-      # executes command
       return ('drop_table', table_name)
 
 
@@ -271,10 +250,9 @@ class SQLParser:
 
       return ('select', columns_list, tables_list, conditions)
 
-   # at the moment we support only expression composed only by boolean operators
-   # TODO: add support for arithmetic operators
+
+   # shunting-yard algorithm without brackets support
    def infix_to_postfix(self, infix_tokens):
-      # shunting-yard algorithm (without brackets support)
       if not infix_tokens:
             raise ValueError('Wrong syntax for SELECT, missing list of conditions.')
 
@@ -286,8 +264,8 @@ class SQLParser:
             postfix_tokens.append(token.get_value())
             continue
 
-         if token.get_name() != 'BOOLEAN_OPERATOR':   # TODO: tokenize strings directly inside the lexer
-            raise ValueError('Wrong syntax for SELECT, expecting a boolean operator, got something else.')
+         if token.get_name() != 'OPERATOR':
+            raise ValueError('Wrong syntax for SELECT, expecting an operator, got something else.')
 
          # the token is an operator
          while True:
@@ -305,7 +283,7 @@ class SQLParser:
             postfix_tokens.append(operators_stack.pop())
          operators_stack.append(token.get_value())
 
-      # empties the operators stack after we consume all the infix tokens
+      # there might still be something in the operator stack after the infix_tokens are finished
       while operators_stack:
          postfix_tokens.append(operators_stack.pop())
 

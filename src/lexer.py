@@ -27,8 +27,7 @@ class SQLLexer:
    commands = {'create', 'load', 'store', 'drop', 'insert', 'print', 'select'}
    keywords = {'table', 'as', 'into', 'from', 'where'}
    types = {'string', 'int', 'float'}
-   boolean_operators = {'and', 'or', '>', '<', '=', '=>', '<='}   # TODO: merge operator token names
-   arithmetic_operators = {'-', '+', '*', '/'}
+   operators = {'and', 'or', '>', '<', '=', '=>', '<=', '-', '+', '*', '/'}
    list_separator = {',', '(', ')'} # TODO: move , and () into different sets
 
 
@@ -46,10 +45,8 @@ class SQLLexer:
          token_name = 'SEPARATOR'
       elif token_value in self.types:
          token_name = 'TYPE'
-      elif token_value in self.arithmetic_operators:
-         token_name = 'ARITHMETIC_OPERATOR'
-      elif token_value in self.boolean_operators:
-         token_name = 'BOOLEAN_OPERATOR'
+      elif token_value in self.operators:
+         token_name = 'OPERATOR'
       else:
          token_name = 'LITERAL'
       return Token(token_name, token_value)

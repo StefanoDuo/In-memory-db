@@ -13,243 +13,172 @@ def zip_equal(*args):
 
 
 
-# TODO: implement NaN and NOVALUE logic
-class TypeString:
+class Type:
+   def __init__(self, value):
+      self.value = value
+      self.operators = {}
+
+
+   def __str__(self):
+      return str(self.get_value())
+
+
+   def get_value(self):
+      return self.value
+
+
+   def check_type(self, value2):
+      if type(self) is not type(value2):
+         raise TypeError('Arguments belongs to different types.')
+
+
+   def do_operation(self, operator, value2):
+      return self.operators[operator](value2)
+
+
+
+class TypeBool(Type):
+   def __init__(self, value):
+      super().__init__(value);
+      self.operators['and'] = self.boolean_and
+      self.operators['or'] = self.boolean_or
+
+
+   def boolean_and(self, value2):
+      self.check_type(value2)
+      return TypeBool(self.get_value() and value2.get_value())
+
+
+   def boolean_or(self, value2):
+      self.check_type(value2)
+      return TypeBool(self.get_value() or value2.get_value())
+
+
+
+class TypeBase(Type):
+   def __init__(self, value):
+      super().__init__(value)
+      self.operators['<'] = self.less_than
+      self.operators['<='] = self.less_than_or_equal
+      self.operators['='] = self.equal
+      self.operators['<>'] = self.not_equal
+      self.operators['>'] = self.greater_than
+      self.operators['>='] = self.greater_than_or_equal
+      self.operators['+'] = self.add
+
+
+   def less_than(self, value2):
+      self.check_type(value2)
+      return TypeBool(self.get_value() < value2.get_value())
+
+
+   def less_than_or_equal(self, value2):
+      return TypeBool(self.get_value() <= value2.get_value())
+
+
+   def equal(self, value2):
+      self.check_type(value2)
+      if self.wrong_type(value2):
+         raise TypeError('Value')
+      return TypeBool(self.get_value() == value2.get_value())
+
+
+   def not_equal(self, value2):
+      self.check_type(value2)
+      return TypeBool(self.get_value() != value2.get_value())
+
+
+   def greater_than(self, value2):
+      self.check_type(value2)
+      return TypeBool(self.get_value() > value2.get_value())
+
+
+   def greater_than_or_equal(self, value2):
+      self.check_type(value2)
+      return TypeBool(self.get_value() >= value2.get_value())
+
+
+   def add(self, value2):
+      self.check_type(value2)
+      # self.new_instance will call the new_instance method of the child class
+      # that's because in python every function is a virtual function in the c++ sense
+      return self.new_instance(self.get_value() + value2.get_value())
+
+
+
+class TypeNumber(TypeBase):
+   def __init__(self, value):
+      super().__init__(value)
+      self.operators['-'] = self.sub
+      self.operators['*'] = self.mul
+      self.operators['/'] = self.div
+
+
+   def sub(self, value2):
+      self.check_type(value2)
+      return self.new_instance(self.get_value() - value2.get_value())
+
+
+   def mul(self, value2):
+      self.check_type(value2)
+      return self.new_instance(self.get_value() * value2.get_value())
+
+
+   def div(self, value2):
+      self.check_type(value2)
+      return self.new_instance(self.get_value() / value2.get_value())
+
+
+
+class TypeString(TypeBase):
    regex = re.compile(r"^'.*'$")
 
 
    def __init__(self, value):
       if type(value) is str and not self.regex.match(value):
          raise TypeError("Value can't be parsed as a string.")
-      self.is_NOVALUE = False
-      self.value = str(value[1:-1])
-
-
-   def get_value(self):
-      return self.value
+      super().__init__(value[1:-1])
 
 
    def __str__(self):
-      if self.is_NOVALUE:
-         return "''"
       return "'" + self.get_value() + "'"
 
 
-   def __add__(self, str2):
-      return TypeString(self.get_value() + str2.get_value())
-
-
-   def __lt__(self, str2):
-      return self.get_value() < str2.get_value()
-
-
-   def __le__(self, str2):
-      return self.get_value() <= str2.get_value()
-
-
-   def equal(self, str2):
-      return self.get_value() == str2.get_value()
-
-
-   def __ne__(self, str2):
-      return self.get_value() != str2.get_value()
-
-
-   def __gt__(self, str2):
-      return self.get_value() > str2.get_value()
-
-
-   def __ge__(self, str2):
-      return self.get_value() >= str2.get_value()
-
-
-   def boolean_and(self, str2):
-      return bool(self.get_value()) and bool(str2.get_value())
-
-
-   def boolean_or(self, str2):
-      return bool(self.get_value()) or bool(str2.get_value())
-
-
-   def operation(self, operator, str2):
-      return self.operators[operator](self, str2)
-
-
-   operators = {'+': __add__,
-                '<': __lt__,
-                '<=': __le__,
-                '=': equal,
-                '<>': __ne__,
-                '>': __gt__,
-                '>=': __ge__,
-                'and': boolean_and,
-                'or': boolean_or}
+   @staticmethod
+   def new_instance(value):
+      return TypeString(value)
 
 
 
-class TypeInt:
+class TypeInt(TypeNumber):
    regex = re.compile(r"^-?\d*$")
 
 
    def __init__(self, value):
       if type(value) is str and not self.regex.match(value):
          raise TypeError("Value can't be parsed as an int.")
-      self.is_NaN = False
-      self.is_NOVALUE = False
-      self.value = int(value)
+      super().__init__(int(value))
 
 
-   def get_value(self):
-      return self.value
-
-
-   def __str__(self):
-      if self.is_NaN:
-         return "NaN"
-      if self.is_NOVALUE:
-         return "0"
-      return str(self.get_value())
-
-
-   def __add__(self, int2):
-      return TypeInt(self.get_value() + int2.get_value())
-
-
-   def __sub__(self, int2):
-      return TypeInt(self.get_value() - int2.get_value())
-
-
-   def __mul__(self, int2):
-      return TypeInt(self.get_value() * int2.get_value())
-
-
-   def __div__(self, int2):
-      return TypeInt(self.get_value() / int2.get_value())
-
-
-   def __lt__(self, int2):
-      return self.get_value() < int2.get_value()
-
-
-   def __le__(self, int2):
-      return self.get_value() <= int2.get_value()
-
-
-   def equal(self, int2):
-      return self.get_value() == int2.get_value()
-
-
-   def __ne__(self, int2):
-      return self.get_value() != int2.get_value()
-
-
-   def __gt__(self, int2):
-      return self.get_value() > int2.get_value()
-
-
-   def __ge__(self, int2):
-      return self.get_value() >= int2.get_value()
-
-
-   def operation(self, operator, str2):
-      return self.operators[operator](self, str2)
-
-
-   operators = {'+': __add__,
-                '-': __sub__,
-                '*': __mul__,
-                '/': __div__,
-                '<': __lt__,
-                '<=': __le__,
-                '=': equal,
-                '<>': __ne__,
-                '>': __gt__,
-                '>=': __ge__}
+   @staticmethod
+   def new_instance(value):
+      return TypeInt(value)
 
 
 
-class TypeFloat:
+class TypeFloat(TypeNumber):
    regex = re.compile(r"^-?\d*\.\d*$")
 
 
    def __init__(self, value):
       if type(value) is str and not self.regex.match(value):
          raise TypeError("Value can't be parsed as a float.")
-      self.is_NaN = False
-      self.is_NOVALUE = False
-      self.value = float(value)
+      super().__init__(float(value))
 
 
-   def get_value(self):
-      return self.value
-
-
-   def __str__(self):
-      if self.is_NaN:
-         return "NaN"
-      if self.is_NOVALUE:
-         return "0.0"
-      return str(self.value)
-
-
-   def __add__(self, float2):
-      return TypeFloat(self.value + float2.value)
-
-
-   def __sub__(self, float2):
-      return TypeFloat(self.value - float2.value)
-
-
-   def __mul__(self, float2):
-      return TypeFloat(self.value * float2.value)
-
-
-   def __div__(self, float2):
-      return TypeFloat(self.value / float2.value)
-
-
-   def __add__(self, float2):
-      return TypeString(self.get_value() + float2.get_value())
-
-
-   def __lt__(self, float2):
-      return self.get_value() < float2.get_value()
-
-
-   def __le__(self, float2):
-      return self.get_value() <= float2.get_value()
-
-
-   def equal(self, float2):
-      return self.get_value() == float2.get_value()
-
-
-   def __ne__(self, float2):
-      return self.get_value() != float2.get_value()
-
-
-   def __gt__(self, float2):
-      return self.get_value() > float2.get_value()
-
-
-   def __ge__(self, float2):
-      return self.get_value() >= float2.get_value()
-
-
-   def operation(self, operator, str2):
-      return self.operators[operator](self, str2)
-
-
-   operators = {'+': __add__,
-                '-': __sub__,
-                '*': __mul__,
-                '/': __div__,
-                '<': __lt__,
-                '<=': __le__,
-                '=': equal,
-                '<>': __ne__,
-                '>': __gt__,
-                '>=': __ge__}
+   @staticmethod
+   def new_instance(value):
+      return TypeFloat(value)
 
 
 
@@ -274,13 +203,17 @@ class Row:
             arg1 = stack.pop()
             # except IndexError as ie:
                # raise ValueError("Wrong syntax for SELECT, something went wrong while parsing the condition list.") from ie
-            result = arg1.operation(operator, arg2)   #TODO: implement method operation for type class
+            result = arg1.do_operation(operator, arg2)
             stack.append(result)
          elif element[0] == 'COLUMN_NAME':
             stack.append(self.row[element[1]])
          else:
             stack.append(element[1])
-      return bool(stack.pop())
+
+      result = stack.pop().get_value()
+      if type(result) is not bool:
+         raise ValueError('Something went wrong while applying the condition, final value was not a bool.')
+      return result
 
 
    def __getitem__(self, key):
@@ -478,7 +411,6 @@ class Database:
       table.insert_row(parsed_values)
 
 
-   # TODO: implement filtering applying condition to every row
    def select(self, columns_list, tables_list, condition):
       # checks if all the tables exist and creates the tables scope
       tables_scope = {}
