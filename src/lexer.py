@@ -36,7 +36,6 @@ class SQLLexer:
 
 
    def token(self, token_value):
-      token_name = ''
       if token_value in self.commands:
          token_name = 'COMMAND'
       elif token_value in self.keywords:

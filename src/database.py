@@ -13,6 +13,7 @@ def zip_equal(*args):
 
 
 
+# TODO: definite exceptions classes for every error type
 class Type:
    def __init__(self, value):
       self.value = value
@@ -33,13 +34,17 @@ class Type:
 
 
    def do_operation(self, operator, value2):
+      if operator not in self.operators:
+         raise ValueError('Undefined operator {}'.format(operator))
       return self.operators[operator](value2)
 
 
 
 class TypeBool(Type):
    def __init__(self, value):
-      super().__init__(value);
+      if type(value) is not bool:
+         raise TypeError('Bool value must be either True or False.')
+      super().__init__(value)
       self.operators['and'] = self.boolean_and
       self.operators['or'] = self.boolean_or
 
@@ -78,8 +83,6 @@ class TypeBase(Type):
 
    def equal(self, value2):
       self.check_type(value2)
-      if self.wrong_type(value2):
-         raise TypeError('Value')
       return TypeBool(self.get_value() == value2.get_value())
 
 
@@ -107,16 +110,21 @@ class TypeBase(Type):
 
 
 class TypeNumber(TypeBase):
-   def __init__(self, value):
+   def __init__(self, value, isNaN=False):
       super().__init__(value)
+      self.isNaN = isNaN
       self.operators['-'] = self.sub
       self.operators['*'] = self.mul
       self.operators['/'] = self.div
+      self.arithmetic_operators = {'+', '-', '*', '/'}
 
 
    def sub(self, value2):
       self.check_type(value2)
-      return self.new_instance(self.get_value() - value2.get_value())
+      if self.isNaN or value2.isNaN:
+         return self.new_instance(0, True)
+      else:
+         return self.new_instance(self.get_value() - value2.get_value())
 
 
    def mul(self, value2):
@@ -126,7 +134,28 @@ class TypeNumber(TypeBase):
 
    def div(self, value2):
       self.check_type(value2)
-      return self.new_instance(self.get_value() / value2.get_value())
+      if value2.get_value() == 0:
+         return self.new_instance(0, True)
+      else:
+         return self.new_instance(self.get_value() / value2.get_value())
+
+
+   def __str__(self):
+      if self.isNaN:
+         return 'NaN'
+      else:
+         return super().__str__()
+
+   def do_operation(self, operator, value2):
+      if operator not in self.operators:
+         raise ValueError('Undefined operator {}'.format(operator))
+      if self.isNaN or value2.isNaN:
+         if operator in self.arithmetic_operators:
+            return self.new_instance(0, True)
+         else:
+            return TypeBool(False)
+      return super().do_operation(operator, value2)
+
 
 
 
@@ -154,15 +183,15 @@ class TypeInt(TypeNumber):
    regex = re.compile(r"^-?\d*$")
 
 
-   def __init__(self, value):
+   def __init__(self, value, isNaN=False):
       if type(value) is str and not self.regex.match(value):
          raise TypeError("Value can't be parsed as an int.")
-      super().__init__(int(value))
+      super().__init__(int(value), isNaN)
 
 
    @staticmethod
-   def new_instance(value):
-      return TypeInt(value)
+   def new_instance(value, isNaN=False):
+      return TypeInt(value, isNaN)
 
 
 
@@ -170,15 +199,15 @@ class TypeFloat(TypeNumber):
    regex = re.compile(r"^-?\d*\.\d*$")
 
 
-   def __init__(self, value):
+   def __init__(self, value, isNaN=False):
       if type(value) is str and not self.regex.match(value):
          raise TypeError("Value can't be parsed as a float.")
-      super().__init__(float(value))
+      super().__init__(float(value), isNaN)
 
 
    @staticmethod
-   def new_instance(value):
-      return TypeFloat(value)
+   def new_instance(value, isNaN=False):
+      return TypeFloat(value, isNaN)
 
 
 
@@ -198,11 +227,11 @@ class Row:
       for element in condition:
          if element[0] == 'OPERATOR':
             operator = element[1]
-            # try:
-            arg2 = stack.pop()
-            arg1 = stack.pop()
-            # except IndexError as ie:
-               # raise ValueError("Wrong syntax for SELECT, something went wrong while parsing the condition list.") from ie
+            try:
+               arg2 = stack.pop()
+               arg1 = stack.pop()
+            except IndexError as ie:
+               raise ValueError("Wrong syntax for SELECT, something went wrong while parsing the condition list.") from ie
             result = arg1.do_operation(operator, arg2)
             stack.append(result)
          elif element[0] == 'COLUMN_NAME':
@@ -288,6 +317,7 @@ class Table:
    def filter_table(self, condition):
       if not condition:
          return self
+      # translates column names into indexes and parses literals into TypeClasses
       condition = self.modify_condition(condition)
       filtered_table = Table(self.get_column_names(), self.get_column_types())
       for row in self.get_rows():
@@ -318,7 +348,10 @@ class Table:
       table_header = self.get_header_string()
       stringified_rows = (str(row) for row in self.get_rows())
       table_content = '\n'.join(stringified_rows)
-      return table_header + '\n' + table_content
+      result = table_header
+      if table_content:
+         result += '\n' + table_content
+      return result
 
 
    def insert_row(self, row):
@@ -364,31 +397,39 @@ class Database:
 
    def __init__(self):
       self.tables = {}
+      self.commands = {'create_table': self.create_table,
+                       'create_table_as': self.create_table_as,
+                       'drop_table': self.drop_table,
+                       'insert_into': self.insert_into,
+                       'print_table': self.print_table,
+                       'select': self.select}
 
 
    def transact(self, command, *args):
-      return self.commands[command](self, *args)
+      return self.commands[command](*args)
 
 
    def create_table(self, table_name, column_names, column_types):
       if table_name in self.tables:
          raise NameError('A table named {} doesn\'t exists in memory.'.format(table_name))
-
       self.tables[table_name] = Table(column_names, column_types)
+
+   def create_table_as(self, table_name, columns_list, tables_list, condition):
+      if table_name in self.tables:
+         raise NameError('A table named {} doesn\'t exists in memory.'.format(table_name))
+      self.tables[table_name] = self.select(columns_list, tables_list, condition)
 
 
    def print_table(self, table_name):
       if table_name not in self.tables:
          raise NameError('A table named {} doesn\'t exists in memory.'.format(table_name))
-
       table = self.tables[table_name]
-      return str(table)
+      return table
 
 
    def drop_table(self, table_name):
       if table_name not in self.tables:
          raise NameError('A table named {} doesn\'t exists in memory.'.format(table_name))
-
       del self.tables[table_name]
 
 
@@ -400,8 +441,10 @@ class Database:
       types = table.get_column_types()
       parsed_values = []
       for i, (value, column_type) in enumerate(itertools.zip_longest(values_list, types)):
-         if not column_type or not value:
+         if not column_type:
             raise ValueError('There are too many values in the values list.')
+         if not value:
+            raise ValueError('There are not enough values in the values list.')
          try:
             value = self.value_parse[column_type](value)
          except TypeError:
@@ -423,7 +466,7 @@ class Database:
          columns_list = list(column for table in tables_scope.values() for column in table.get_column_names())
 
       # checks if all the columns_name exist in the tables scope, and stores their position in the select table
-      columns = OrderedDict()
+      columns = {}
       for i, column_name in enumerate(columns_list):
          if column_name in columns: # at the moment we only support columns with distinct names
             raise ValueError('You can\'t have 2 columns with the same name in a query.')
@@ -435,20 +478,9 @@ class Database:
             raise NameError('A column named {} doesn\'t exists inside the specified tables list.'.format(column_name))
 
       select_table = Table.cartesian_product(tables_scope.values())
-
       select_table = select_table.filter_table(condition)
-
       column_names_iterator = (column_name for column_name in columns)
       select_table = select_table.extract_columns_by_name(column_names_iterator)
-
       columns_order = tuple(columns[column_name] for column_name in select_table.get_column_names())
       select_table = select_table.reorder_columns(columns_order)
-
-      return str(select_table)
-
-
-   commands = {'create_table': create_table,
-               'drop_table': drop_table,
-               'insert_into': insert_into,
-               'print_table': print_table,
-               'select': select}
+      return select_table

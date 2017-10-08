@@ -1,11 +1,17 @@
 import re
 
 
+# NOTES
+# 1) instead of first creating an AST then applying it's semantinc meaning (which could be
+#    done by two different modules) i preferred to do both in one step inside the parse because
+#    it was quite trivial to build the data structures needed by the database interface while
+#    parsing the command (for the sql subset i decided to implement), this way i still got to
+#    learn about lexical analysis, parsing etc. without complicating things too much
+# 2) the "database virtual machine" offers a function oriented API because that was the easiest
+#    way to implent one, even though this way operations optimization is way more difficult (if
+#    not entirely impossible)
 
-# to simplify the database job the parser instead of returning an AST returns the
-# data structures needed by the database method for the specific command being parsed
-# while the databse is a virtual machine where the possible operations are offered
-# directly as functions
+# TODO: definite exceptions classes for every error type
 class SQLParser:
    name_regex = re.compile(r"^[a-zA-Z]\w*$")
 
@@ -24,6 +30,14 @@ class SQLParser:
                          'or': 0}
 
 
+   def __init__(self):
+      self.commands = {'create': self.create_table,
+                       'drop': self.drop_table,
+                       'insert': self.insert_into,
+                       'print': self.print_table,
+                       'select': self.select}
+
+
    def parse(self, tokens):
       #eats command token
       if not tokens:
@@ -33,7 +47,7 @@ class SQLParser:
       command = tokens[0].get_value()
       tokens = tokens[1:]
 
-      return self.commands[command](self, tokens)
+      return self.commands[command](tokens)
 
 
    def create_table(self, tokens):
@@ -50,9 +64,23 @@ class SQLParser:
       table_name = tokens[0].get_value()
       tokens = tokens[1:]
 
+      if not tokens:
+         raise ValueError('Wrong syntax for CREATE TABLE, missing column list or select statement.')
+
+      # as <select> version
+      if tokens[0].get_value() == 'as':
+         tokens = tokens[1:]
+         if not tokens or tokens[0].get_value() != 'select':
+            raise ValueError('Wrong syntax for CREATE TABLE, missing select statement.')
+         tokens = tokens[1:]
+
+         (_, columns_list, tables_list, condition) = self.select(tokens)
+         return ('create_table_as', table_name, columns_list, tables_list, condition)
+
+      # normal version
       # eats '(' token
-      if not tokens or tokens[0].get_value() != '(':
-         raise ValueError('Wrong syntax for CREATE TABLE, missing column list')
+      if tokens[0].get_value() != '(':
+         raise ValueError('Wrong syntax for CREATE TABLE, expecting column list, got something else.')
       tokens = tokens[1:]
 
       column_names = []
@@ -90,7 +118,6 @@ class SQLParser:
       if tokens:
          raise ValueError('Wrong syntax for CREATE TABLE, command doesn\'t end after )')
 
-      # executes command
       return ('create_table', table_name, column_names, column_types)
 
 
@@ -109,7 +136,6 @@ class SQLParser:
       if tokens:
          raise ValueError('Wrong syntax for PRINT, command doesn\'t end after table_name.')
 
-      # executes command
       return ('print_table', table_name)
 
 
@@ -120,8 +146,10 @@ class SQLParser:
       tokens = tokens[1:]
 
       # eats table_table token
-      if not tokens or tokens[0].get_name() != 'LITERAL':
+      if not tokens:
          raise ValueError('Wrong syntax for INSERT INTO, missing table_name.')
+      if tokens[0].get_name() != 'LITERAL':
+         raise ValueError('Wrong syntax for INSERT INTO, table_name is a reserved keyword.')
       if not self.name_regex.match(tokens[0].get_value()):
          raise ValueError('Wrong syntax for INSERT INTO, table_name contains forbidden characters.')
       table_name = tokens[0].get_value()
@@ -246,9 +274,9 @@ class SQLParser:
          raise ValueError('Wrong syntax for SELECT, expecting where clause after tables list.')
       tokens = tokens[1:]
 
-      conditions = self.infix_to_postfix(tokens)
+      condition = self.infix_to_postfix(tokens)
 
-      return ('select', columns_list, tables_list, conditions)
+      return ('select', columns_list, tables_list, condition)
 
 
    # shunting-yard algorithm without brackets support
@@ -288,10 +316,3 @@ class SQLParser:
          postfix_tokens.append(operators_stack.pop())
 
       return postfix_tokens
-
-
-   commands = {'create': create_table,
-               'drop': drop_table,
-               'insert': insert_into,
-               'print': print_table,
-               'select': select}
