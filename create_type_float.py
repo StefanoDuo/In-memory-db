@@ -20,21 +20,6 @@ class CreateTypeFloat(unittest.TestCase):
       "-.6"
    )
 
-   print_correct_value = (
-      "311.232",
-      "3.2",
-      "2.0",
-      "0.3",
-      "4.0",
-      "0.6",
-      "-311.232",
-      "-3.2",
-      "-2.0",
-      "-0.3",
-      "-4.0",
-      "-0.6"
-   )
-
 
    wrong_values = (
       "'this is not a float'",
@@ -44,10 +29,8 @@ class CreateTypeFloat(unittest.TestCase):
 
 
    def test_correct_values(self):
-      for value, print in zip(self.correct_values, self.print_correct_value):
-         result = src.database.TypeFloat(value)
-         result = str(result)
-         self.assertEqual(result, print)
+      output = tuple(str(src.database.TypeFloat(value)) for value in self.correct_values)
+      self.assertSequenceEqual(output, self.print_correct_value)
 
 
    def test_wrong_values(self):

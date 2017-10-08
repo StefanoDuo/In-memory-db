@@ -26,10 +26,8 @@ class CreateTypeString(unittest.TestCase):
 
 
    def test_correct_values(self):
-      for value in self.correct_values:
-         result = src.database.TypeString(value)
-         result = str(result)
-         self.assertEqual(result, value)
+      output = tuple(str(src.database.TypeString(value)) for value in self.correct_values)
+      self.assertSequenceEqual(output, self.correct_values)
 
 
    def test_wrong_values(self):
