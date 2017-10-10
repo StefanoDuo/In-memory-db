@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import itertools
 import re
 

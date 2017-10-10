@@ -1,5 +1,4 @@
 import unittest
-import context
 from context import sql_interpreter
 import sql_interpreter.database
 
