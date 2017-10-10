@@ -1,6 +1,7 @@
 import unittest
-import src.lexer
-import src.parser
+from context import sql_interpreter
+import sql_interpreter.lexer
+import sql_interpreter.parser
 
 
 class ParseInsertInto(unittest.TestCase):
@@ -49,32 +50,32 @@ class ParseInsertInto(unittest.TestCase):
    )
 
    def test_forbidden_table_names(self):
-      lexer = src.lexer.SQLLexer()
-      parser = src.parser.SQLParser()
+      lexer = sql_interpreter.lexer.SQLLexer()
+      parser = sql_interpreter.parser.SQLParser()
       for query in self.forbidden_table_names:
          tokens = lexer.tokenize(query)
          self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_spelling_errors(self):
-      lexer = src.lexer.SQLLexer()
-      parser = src.parser.SQLParser()
+      lexer = sql_interpreter.lexer.SQLLexer()
+      parser = sql_interpreter.parser.SQLParser()
       for query in self.spelling_errors:
          tokens = lexer.tokenize(query)
          self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_values_list_errors(self):
-      lexer = src.lexer.SQLLexer()
-      parser = src.parser.SQLParser()
+      lexer = sql_interpreter.lexer.SQLLexer()
+      parser = sql_interpreter.parser.SQLParser()
       for query in self.values_list_errors:
          tokens = lexer.tokenize(query)
          self.assertRaises(ValueError, parser.parse, tokens)
 
 
    def test_trailing_stuff(self):
-      lexer = src.lexer.SQLLexer()
-      parser = src.parser.SQLParser()
+      lexer = sql_interpreter.lexer.SQLLexer()
+      parser = sql_interpreter.parser.SQLParser()
       for query in self.trailing_stuff:
          tokens = lexer.tokenize(query)
          self.assertRaises(ValueError, parser.parse, tokens)

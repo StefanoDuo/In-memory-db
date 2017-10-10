@@ -1,6 +1,8 @@
 import unittest
-import src.database
 import itertools
+import context
+from context import sql_interpreter
+import sql_interpreter.database
 
 
 
@@ -15,7 +17,7 @@ class CreateRow(unittest.TestCase):
 
    def test_create_row_from_values(self):
       for value_tuple in self.rows:
-         row = src.database.Row(value_tuple)
+         row = sql_interpreter.database.Row(value_tuple)
          for i, value in enumerate(value_tuple):
             self.assertEqual(row[i], value)
          for tuple in zip(row, value_tuple):

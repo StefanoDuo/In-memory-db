@@ -1,5 +1,6 @@
 import unittest
-import src.database
+from context import sql_interpreter
+import sql_interpreter.database
 
 
 
@@ -26,13 +27,13 @@ class CreateTypeString(unittest.TestCase):
 
 
    def test_correct_values(self):
-      output = tuple(str(src.database.TypeString(value)) for value in self.correct_values)
+      output = tuple(str(sql_interpreter.database.TypeString(value)) for value in self.correct_values)
       self.assertSequenceEqual(output, self.correct_values)
 
 
    def test_wrong_values(self):
       for value in self.wrong_values:
-         self.assertRaises(TypeError, src.database.TypeString, value)
+         self.assertRaises(TypeError, sql_interpreter.database.TypeString, value)
 
 
 
