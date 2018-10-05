@@ -2,7 +2,7 @@ import re
 
 
 # NOTES
-# 1) instead of first creating an AST then applying it's semantinc meaning (which could be
+# 1) instead of first creating an AST then applying its semantic meaning (which could be
 #    done by two different modules) i preferred to do both in one step inside the parse because
 #    it was quite trivial to build the data structures needed by the database interface while
 #    parsing the command (for the sql subset i decided to implement), this way i still got to
@@ -145,7 +145,7 @@ class SQLParser:
          raise ValueError('Wrong syntax for INSERT INTO, missing into after insert.')
       tokens = tokens[1:]
 
-      # eats table_table token
+      # eats table_name token
       if not tokens:
          raise ValueError('Wrong syntax for INSERT INTO, missing table_name.')
       if tokens[0].get_name() != 'LITERAL':
